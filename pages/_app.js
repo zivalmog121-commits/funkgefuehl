@@ -21,21 +21,28 @@ export default function App({ Component, pageProps }) {
       setUser(authUser);
       
       if (authUser) {
-        // Load state from Firebase when user signs in
-        loadStateFromFirebase().then((cloudState) => {
-          if (cloudState) {
+        // Set up global sync function
+        import("./firebaseSync").then(({ syncStateToFirebase, loadStateFromFirebase, listenToStateChanges }) => {
+          // Make sync available globally
+          window.__firebaseSync = syncStateToFirebase;
+          
+          // Load state from Firebase when user signs in
+          loadStateFromFirebase().then((cloudState) => {
+            if (cloudState) {
+              localStorage.setItem('funkgefuehl:state', JSON.stringify(cloudState));
+              window.dispatchEvent(new Event('syncedFromCloud'));
+            }
+          });
+          
+          // Listen for real-time updates from Firebase
+          listenToStateChanges(authUser.uid, (cloudState) => {
             localStorage.setItem('funkgefuehl:state', JSON.stringify(cloudState));
-          }
+            window.dispatchEvent(new Event('syncedFromCloud'));
+          });
         });
-        
-        // Listen for real-time updates from Firebase
-        const unsubscribeListener = listenToStateChanges(authUser.uid, (cloudState) => {
-          localStorage.setItem('funkgefuehl:state', JSON.stringify(cloudState));
-          // Dispatch event so pages know to reload state
-          window.dispatchEvent(new Event('syncedFromCloud'));
-        });
-        
-        return () => unsubscribeListener();
+      } else {
+        // User signed out
+        window.__firebaseSync = null;
       }
     });
     return () => unsubscribe();
