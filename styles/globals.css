@@ -60,6 +60,26 @@
   --shadow-xl: 0 12px 48px rgba(59, 130, 246, 0.2);
 }
 
+/* Dark mode */
+[data-theme="dark"] {
+  --bg: #0F0E0D;
+  --bg-deep: #1A1815;
+  --bg-elevated: #252220;
+  --bg-card: #2D2925;
+  --bg-card-hover: #1E3A5F;
+  --border: #3D3935;
+  --border-light: #1E3A5F;
+
+  --text: #F5F1ED;
+  --text-muted: #C9BEAF;
+  --text-dim: #8A7F75;
+
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 8px 32px rgba(59, 130, 246, 0.2);
+  --shadow-xl: 0 12px 48px rgba(59, 130, 246, 0.15);
+}
+
 * , *::before, *::after { box-sizing: border-box; }
 
 html, body {

@@ -1,6 +1,6 @@
 import { useRouter } from "next/router";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const NAV_ITEMS = [
   { href: "/", icon: "📻", label: "Heute" },
@@ -11,7 +11,24 @@ const NAV_ITEMS = [
 export default function Layout({ children, title, onBack }) {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [darkMode, setDarkMode] = useState(false);
   const isDesktop = typeof window !== "undefined" && window.innerWidth >= 1024;
+
+  useEffect(() => {
+    // Load dark mode preference
+    const saved = localStorage.getItem("funkgefuehl:darkmode");
+    if (saved) {
+      setDarkMode(saved === "true");
+      document.documentElement.setAttribute("data-theme", saved === "true" ? "dark" : "light");
+    }
+  }, []);
+
+  const toggleDarkMode = () => {
+    const newMode = !darkMode;
+    setDarkMode(newMode);
+    localStorage.setItem("funkgefuehl:darkmode", newMode);
+    document.documentElement.setAttribute("data-theme", newMode ? "dark" : "light");
+  };
 
   return (
     <div className="shell">
@@ -71,6 +88,16 @@ export default function Layout({ children, title, onBack }) {
               {sidebarOpen ? "◀" : "▶"}
             </button>
           )}
+          
+          <button 
+            className="icon-btn"
+            onClick={toggleDarkMode}
+            aria-label="Dark mode toggle"
+            title={darkMode ? "Light mode" : "Dark mode"}
+            style={{ marginLeft: "auto" }}
+          >
+            {darkMode ? "☀️" : "🌙"}
+          </button>
           
           {onBack && <div className="topbar-brand">{title}</div>}
           {onBack && <div style={{ width: 38 }} />}
