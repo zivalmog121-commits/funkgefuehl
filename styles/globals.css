@@ -294,9 +294,24 @@ button { font-family: inherit; }
   padding: 20px;
   box-shadow: var(--shadow-sm);
   transition: box-shadow 0.2s;
+  margin-bottom: 18px;
 }
 .card:hover {
   box-shadow: var(--shadow-md);
+}
+
+/* Checkbox styling for settings */
+input[type="checkbox"] {
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+select {
+  transition: all 0.2s;
+}
+select:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-glow);
 }
 
 .readout-row {
