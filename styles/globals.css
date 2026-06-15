@@ -841,11 +841,12 @@ select:focus {
   display: flex;
   align-items: center;
   gap: 12px;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
 }
 .collection-item:hover {
   border-color: var(--accent);
   box-shadow: var(--shadow-md);
+  transform: translateX(2px);
 }
 
 .collection-term {
@@ -909,8 +910,19 @@ select:focus {
   background: transparent;
   color: var(--text-muted);
   letter-spacing: 0.5px;
+  transition: all 0.2s ease;
 }
-.chip.active { background: var(--accent); color: #1A1606; border-color: var(--accent); }
+.chip:hover:not(.active) {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-glow);
+}
+.chip.active { 
+  background: var(--accent); 
+  color: #1A1606; 
+  border-color: var(--accent);
+  transform: scale(1.05);
+}
 
 /* ============================================================
    Settings
