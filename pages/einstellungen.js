@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import Layout from "../components/Layout";
-import { loadState, saveState, getLevel, GAMES } from "../lib/storage";
+import { loadState, saveState, syncAndSave, getLevel, GAMES } from "../lib/storage";
 
 const TOPICS = [
   { id: "uni", label: "Uni & Studium", emoji: "🎓" },
@@ -63,13 +63,17 @@ export default function Einstellungen() {
       ? selectedTopics.filter((t) => t !== topicId)
       : [...selectedTopics, topicId];
     setSelectedTopics(updated);
-    saveState({ ...state, settings: { ...state.settings, topics: updated } });
+    const newState = { ...state, settings: { ...state.settings, topics: updated } };
+    saveState(newState);
+    syncAndSave(newState).catch(() => {});
   }
 
   function handleLevelChange(e) {
     const level = e.target.value;
     setSelectedLevel(level);
-    saveState({ ...state, settings: { ...state.settings, level } });
+    const newState = { ...state, settings: { ...state.settings, level } };
+    saveState(newState);
+    syncAndSave(newState).catch(() => {});
   }
 
   function resetProgress() {

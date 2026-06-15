@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import Layout from "../components/Layout";
-import { loadState, saveState } from "../lib/storage";
+import { loadState, saveState, syncAndSave } from "../lib/storage";
 
 const CATEGORY_LABELS = {
   wendung: { label: "Wendung", icon: "🗣️" },
@@ -43,6 +43,8 @@ export default function Sammlung() {
     const updated = state.collection.filter((_, i) => i !== index);
     const newState = { ...state, collection: updated };
     saveState(newState);
+    // Sync to Firebase in background
+    syncAndSave(newState).catch(() => {});
     setState(newState);
   }
 
