@@ -31,6 +31,8 @@ export default function App({ Component, pageProps }) {
         // Listen for real-time updates from Firebase
         const unsubscribeListener = listenToStateChanges(authUser.uid, (cloudState) => {
           localStorage.setItem('funkgefuehl:state', JSON.stringify(cloudState));
+          // Dispatch event so pages know to reload state
+          window.dispatchEvent(new Event('syncedFromCloud'));
         });
         
         return () => unsubscribeListener();

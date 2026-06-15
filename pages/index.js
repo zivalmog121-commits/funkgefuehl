@@ -17,6 +17,13 @@ export default function Dashboard() {
 
   useEffect(() => {
     setState(loadState());
+    
+    // Listen for sync events from other devices
+    const handleSync = () => {
+      setState(loadState());
+    };
+    window.addEventListener('syncedFromCloud', handleSync);
+    return () => window.removeEventListener('syncedFromCloud', handleSync);
   }, []);
 
   if (!state) {
