@@ -1,11 +1,7 @@
 import '../styles/globals.css';
-import { useEffect, useState } from 'react';
-import { onAuthStateChange } from '../lib/firebase';
-import { syncStateToFirebase, loadStateFromFirebase, listenToStateChanges } from '../lib/firebaseSync';
+import { useEffect } from 'react';
 
 export default function App({ Component, pageProps }) {
-  const [user, setUser] = useState(null);
-
   useEffect(() => {
     // Register service worker for PWA functionality
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
@@ -13,39 +9,6 @@ export default function App({ Component, pageProps }) {
         // SW registration failed, app still works without it
       });
     }
-  }, []);
-
-  useEffect(() => {
-    // Listen to auth state
-    const unsubscribe = onAuthStateChange((authUser) => {
-      setUser(authUser);
-      
-      if (authUser) {
-        // Set up global sync function
-        import("./firebaseSync").then(({ syncStateToFirebase, loadStateFromFirebase, listenToStateChanges }) => {
-          // Make sync available globally
-          window.__firebaseSync = syncStateToFirebase;
-          
-          // Load state from Firebase when user signs in
-          loadStateFromFirebase().then((cloudState) => {
-            if (cloudState) {
-              localStorage.setItem('funkgefuehl:state', JSON.stringify(cloudState));
-              window.dispatchEvent(new Event('syncedFromCloud'));
-            }
-          });
-          
-          // Listen for real-time updates from Firebase
-          listenToStateChanges(authUser.uid, (cloudState) => {
-            localStorage.setItem('funkgefuehl:state', JSON.stringify(cloudState));
-            window.dispatchEvent(new Event('syncedFromCloud'));
-          });
-        });
-      } else {
-        // User signed out
-        window.__firebaseSync = null;
-      }
-    });
-    return () => unsubscribe();
   }, []);
 
   return <Component {...pageProps} />;
