@@ -22,8 +22,22 @@ export default function WieSagtMan() {
     setError("");
     setItems(null);
     try {
-      const state = loadState();
+          } catch (err) {
+          return;
+        }
+      }
+    }
+
+    // Mark all items in this session as learned
+    items?.forEach((item) => {
+      import("../lib/storage").then(({ addLearnedQuestion }) => {
+        addLearnedQuestion(item);
+      });
+    });
+
+    const state = loadState();
       const recentTerms = state.collection.slice(-20).map((c) => c.term);
+      const learnedHashes = state.learnedQuestions || [];
       const { topics = ["uni", "arbeit", "ki", "alltag"], level = "C1" } = state.settings || {};
       
       const res = await fetch("/api/game", {
@@ -32,6 +46,7 @@ export default function WieSagtMan() {
         body: JSON.stringify({ 
           gameType: "wie_sagt_man", 
           recentTerms,
+          learnedHashes,
           topics,
           level
         }),
@@ -50,6 +65,14 @@ export default function WieSagtMan() {
       
       // If too few items after dedup, fetch more
       const itemsToUse = uniqueItems.length >= 3 ? uniqueItems : data.items;
+      
+      // Mark items as being learned this session
+      itemsToUse?.forEach((item) => {
+        import("../lib/storage").then(({ addLearnedQuestion }) => {
+          addLearnedQuestion(item);
+        });
+      });
+      
       setItems(itemsToUse);
       setIndex(0);
       setRevealed(false);

@@ -24,12 +24,13 @@ export default function PasstDas() {
     try {
       const state = loadState();
       const recentTerms = state.collection.slice(-20).map((c) => c.term);
+      const learnedHashes = state.learnedQuestions || [];
       const { topics = ["uni", "arbeit", "ki", "alltag"], level = "C1" } = state.settings || {};
       
       const res = await fetch("/api/game", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ gameType: "passt_das", recentTerms, topics, level }),
+        body: JSON.stringify({ gameType: "passt_das", recentTerms, learnedHashes, topics, level }),
       });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
@@ -43,7 +44,16 @@ export default function PasstDas() {
         return true;
       });
       
-      setItems(uniqueItems.length >= 3 ? uniqueItems : data.items);
+      const itemsToUse = uniqueItems.length >= 3 ? uniqueItems : data.items;
+      
+      // Mark items as being learned this session
+      itemsToUse?.forEach((item) => {
+        import("../lib/storage").then(({ addLearnedQuestion }) => {
+          addLearnedQuestion(item);
+        });
+      });
+      
+      setItems(itemsToUse);
       setIndex(0);
       setSelected(null);
       setResults({ correct: 0, total: 0 });
