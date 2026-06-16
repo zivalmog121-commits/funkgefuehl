@@ -9,18 +9,39 @@ import {
   pickSmartGame,
   isPlayedToday,
   GAMES,
+  savePhraseOfDay,
+  unsavePhrase,
+  isPhraseSaved,
+  saveState,
+  syncAndSave,
 } from "../lib/storage";
 
 export default function Dashboard() {
   const router = useRouter();
   const [state, setState] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [dailyPhrase, setDailyPhrase] = useState(null);
 
   useEffect(() => {
-    setState(loadState());
+    const loaded = loadState();
+    setState(loaded);
+    
+    // Compute daily phrase from collection
+    if (loaded.collection.length > 0) {
+      const dayOfYear = Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);
+      const phraseIndex = dayOfYear % loaded.collection.length;
+      setDailyPhrase(loaded.collection[phraseIndex]);
+    }
     
     // Listen for sync events from other devices
     const handleSync = () => {
-      setState(loadState());
+      const updated = loadState();
+      setState(updated);
+      if (updated.collection.length > 0) {
+        const dayOfYear = Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);
+        const phraseIndex = dayOfYear % updated.collection.length;
+        setDailyPhrase(updated.collection[phraseIndex]);
+      }
     };
     window.addEventListener('syncedFromCloud', handleSync);
     return () => window.removeEventListener('syncedFromCloud', handleSync);
@@ -80,44 +101,41 @@ export default function Dashboard() {
         streak={state.streak}
       />
 
-      <div className="readout-row">
-        <div className="readout">
-          <div className="readout-value accent">{state.streak}</div>
-          <div className="readout-label">Tage Serie</div>
-        </div>
-        <div className="readout">
-          <div className="readout-value">Lv. {level}</div>
-          <div className="readout-label">{Math.floor(state.xp % 100)} / 100 XP</div>
-          <div className="xp-bar-track">
-            <div className="xp-bar-fill" style={{ width: `${((state.xp % 100) / 100) * 100}%` }} />
+      {/* Daily Phrase Card */}
+      {dailyPhrase && (
+        <div 
+          className="card" 
+          style={{ 
+            marginBottom: 18, 
+            background: "linear-gradient(135deg, rgba(132, 204, 22, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%)",
+            border: "1px solid var(--accent-secondary)",
+            cursor: "pointer"
+          }}
+          onClick={() => setShowModal(true)}
+        >
+          <div className="field-label" style={{ fontSize: "0.85rem", color: "var(--accent-secondary)", marginBottom: 8 }}>
+            💡 Phrase des Tages
+          </div>
+          <div style={{ fontSize: "1.2rem", fontWeight: 700, color: "var(--text)", marginBottom: 8 }}>
+            "{dailyPhrase.term}"
+          </div>
+          <div style={{ fontSize: "0.9rem", color: "var(--text-secondary)", marginBottom: 12 }}>
+            {dailyPhrase.definition}
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button 
+              className="btn btn-secondary" 
+              style={{ flex: 1, fontSize: "0.85rem" }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowModal(true);
+              }}
+            >
+              Mehr zeigen →
+            </button>
           </div>
         </div>
-        <div className="readout">
-          <div className="readout-value good">{state.collection.length}</div>
-          <div className="readout-label">Gesammelt</div>
-        </div>
-      </div>
-
-      {/* Daily Word */}
-      {dailyWord && (
-        <div className="card" style={{ marginBottom: 18, background: "linear-gradient(135deg, rgba(132, 204, 22, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%)", border: "1px solid var(--accent-secondary)" }}>
-          <div className="field-label" style={{ fontSize: "0.85rem", color: "var(--accent-secondary)", marginBottom: 8 }}>⭐ Wort des Tages</div>
-          <div style={{ fontSize: "1.3rem", fontWeight: 700, color: "var(--text)" }}>{dailyWord.term}</div>
-          <div style={{ fontSize: "0.9rem", color: "var(--text-secondary)", marginTop: 4 }}>{dailyWord.definition}</div>
-        </div>
       )}
-
-      {/* Stats Summary */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 18 }}>
-        <div className="readout" style={{ padding: 12, background: "var(--bg-card)", borderRadius: 8 }}>
-          <div className="readout-value accent">{totalGamesPlayed}</div>
-          <div className="readout-label">Spiele gespielt</div>
-        </div>
-        <div className="readout" style={{ padding: 12, background: "var(--bg-card)", borderRadius: 8 }}>
-          <div className="readout-value accent">{Math.floor(state.xp / 100)}</div>
-          <div className="readout-label">Levels erreicht</div>
-        </div>
-      </div>
 
       {/* Daily Challenge */}
       <div className="card daily-challenge" style={{ marginBottom: 18, background: dailyChallengeDone ? "var(--good-glow)" : "linear-gradient(135deg, var(--accent-secondary) 0%, var(--accent) 100%)" }}>
@@ -177,22 +195,77 @@ export default function Dashboard() {
         })}
       </div>
 
-      {/* Recent Words */}
-      {recentWords.length > 0 && (
-        <>
-          <div className="section-title" style={{ fontSize: "1rem", marginTop: 24 }}>Neue Wörter</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {recentWords.map((word, idx) => (
-              <div key={idx} className="chip" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", background: "var(--bg-card)", borderRadius: 8, border: "1px solid var(--accent-secondary)" }}>
-                <div>
-                  <div style={{ fontWeight: 600, color: "var(--text)" }}>{word.term}</div>
-                  <div style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginTop: 2 }}>{word.definition}</div>
-                </div>
-                <span style={{ fontSize: "0.75rem", padding: "4px 8px", background: "var(--accent-secondary)", color: "#000", borderRadius: 4, fontWeight: 600 }}>NEU</span>
+      {/* Modal */}
+      {showModal && dailyPhrase && (
+        <div 
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            alignItems: "flex-end",
+            zIndex: 1000,
+          }}
+          onClick={() => setShowModal(false)}
+        >
+          <div 
+            className="card"
+            style={{
+              width: "100%",
+              borderRadius: "16px 16px 0 0",
+              maxHeight: "80vh",
+              overflow: "auto",
+              padding: 20,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ fontSize: "1.4rem", fontWeight: 700, marginBottom: 12 }}>
+              "{dailyPhrase.term}"
+            </div>
+            
+            <div style={{ marginBottom: 16 }}>
+              <div className="field-label">Bedeutung</div>
+              <div style={{ fontSize: "0.95rem", marginTop: 6 }}>
+                {dailyPhrase.definition}
               </div>
-            ))}
+            </div>
+
+            {dailyPhrase.explanation_he && (
+              <div style={{ marginBottom: 16 }}>
+                <div className="field-label">Erklärung (Hebräisch)</div>
+                <div style={{ fontSize: "0.9rem", marginTop: 6, color: "var(--text-secondary)" }}>
+                  {dailyPhrase.explanation_he}
+                </div>
+              </div>
+            )}
+
+            <div style={{ display: "flex", gap: 8, marginTop: 20 }}>
+              <button 
+                className="btn btn-primary"
+                style={{ flex: 1 }}
+                onClick={() => {
+                  const newState = savePhraseOfDay(state, dailyPhrase);
+                  saveState(newState);
+                  syncAndSave(newState).catch(() => {});
+                  setState(newState);
+                  setShowModal(false);
+                }}
+              >
+                ⭐ Speichern
+              </button>
+              <button 
+                className="btn btn-secondary"
+                style={{ flex: 1 }}
+                onClick={() => setShowModal(false)}
+              >
+                Schließen
+              </button>
+            </div>
           </div>
-        </>
+        </div>
       )}
     </Layout>
   );
