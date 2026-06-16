@@ -53,6 +53,17 @@ export default function Dashboard() {
   })();
   const challengeGameData = GAMES[challengeGame];
 
+  // Daily Word of the Day
+  const dayOfYear = Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);
+  const dailyWordIndex = dayOfYear % Math.max(state.collection.length, 1);
+  const dailyWord = state.collection.length > 0 ? state.collection[dailyWordIndex] : null;
+
+  // Count total games played
+  const totalGamesPlayed = Object.values(state.gameStats || {}).reduce((sum, gs) => sum + gs.total, 0);
+
+  // Recent words (last 5)
+  const recentWords = state.collection.slice(-5).reverse();
+
   let dialSubtext = "Noch keine Daten — leg los";
   if (score >= 80) dialSubtext = "Klingt fast wie ein Local";
   else if (score >= 60) dialSubtext = "Guter Empfang";
@@ -84,6 +95,27 @@ export default function Dashboard() {
         <div className="readout">
           <div className="readout-value good">{state.collection.length}</div>
           <div className="readout-label">Gesammelt</div>
+        </div>
+      </div>
+
+      {/* Daily Word */}
+      {dailyWord && (
+        <div className="card" style={{ marginBottom: 18, background: "linear-gradient(135deg, rgba(132, 204, 22, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%)", border: "1px solid var(--accent-secondary)" }}>
+          <div className="field-label" style={{ fontSize: "0.85rem", color: "var(--accent-secondary)", marginBottom: 8 }}>⭐ Wort des Tages</div>
+          <div style={{ fontSize: "1.3rem", fontWeight: 700, color: "var(--text)" }}>{dailyWord.term}</div>
+          <div style={{ fontSize: "0.9rem", color: "var(--text-secondary)", marginTop: 4 }}>{dailyWord.definition}</div>
+        </div>
+      )}
+
+      {/* Stats Summary */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 18 }}>
+        <div className="readout" style={{ padding: 12, background: "var(--bg-card)", borderRadius: 8 }}>
+          <div className="readout-value accent">{totalGamesPlayed}</div>
+          <div className="readout-label">Spiele gespielt</div>
+        </div>
+        <div className="readout" style={{ padding: 12, background: "var(--bg-card)", borderRadius: 8 }}>
+          <div className="readout-value accent">{Math.floor(state.xp / 100)}</div>
+          <div className="readout-label">Levels erreicht</div>
         </div>
       </div>
 
@@ -144,6 +176,24 @@ export default function Dashboard() {
           );
         })}
       </div>
+
+      {/* Recent Words */}
+      {recentWords.length > 0 && (
+        <>
+          <div className="section-title" style={{ fontSize: "1rem", marginTop: 24 }}>Neue Wörter</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {recentWords.map((word, idx) => (
+              <div key={idx} className="chip" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", background: "var(--bg-card)", borderRadius: 8, border: "1px solid var(--accent-secondary)" }}>
+                <div>
+                  <div style={{ fontWeight: 600, color: "var(--text)" }}>{word.term}</div>
+                  <div style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginTop: 2 }}>{word.definition}</div>
+                </div>
+                <span style={{ fontSize: "0.75rem", padding: "4px 8px", background: "var(--accent-secondary)", color: "#000", borderRadius: 4, fontWeight: 600 }}>NEU</span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </Layout>
   );
 }

@@ -65,7 +65,7 @@ Antworte als JSON-Array mit 5 Objekten, jedes mit genau diesen Feldern:
 Jedes Beispiel zeigt ein hebräisches Wort oder einen kurzen Ausdruck, sowie zwei deutsche Übersetzungsmöglichkeiten — beide grammatisch plausibel, aber nur eine ist die natürliche, gängige Art, wie Muttersprachler es im Alltag/akademischen Kontext sagen würden.
 ${avoid}
 Antworte als JSON-Array mit 10 Objekten, jedes mit genau diesen Feldern:
-- "hebrew": das hebräische Wort/der Ausdruck
+- "word": das hebräische Wort/der Ausdruck (z.B. "עובדה")
 - "optionA": deutsche Übersetzungsmöglichkeit A
 - "optionB": deutsche Übersetzungsmöglichkeit B
 - "correctOption": "A" oder "B" — welche im Alltag natürlicher/gängiger ist
@@ -75,14 +75,19 @@ Antworte als JSON-Array mit 10 Objekten, jedes mit genau diesen Feldern:
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  const { gameType, recentTerms, topics = ["uni", "arbeit", "ki", "alltag"], level = "C1" } = req.body;
+  const { gameType, recentTerms, learnedHashes = [], topics = ["uni", "arbeit", "ki", "alltag"], level = "C1" } = req.body;
   const promptFn = PROMPTS[gameType];
   if (!promptFn) return res.status(400).json({ error: "Unknown game type" });
 
+  const avoidList = [
+    ...(recentTerms || []).slice(0, 20),
+    ...(learnedHashes || []).slice(0, 10)
+  ];
+  
   const avoid =
-    recentTerms && recentTerms.length
-      ? `Vermeide Wiederholungen folgender bereits verwendeter Begriffe/Formulierungen: ${recentTerms.slice(0, 25).join(", ")}.`
-      : "";
+    avoidList.length > 0
+      ? `Vermeide diese ${avoidList.length} bereits bekannten/gespielten Begriffe: ${avoidList.join(", ")}.`
+      : "Erstelle völlig neue, frische Beispiele.";
 
   const persona = buildPersona(level, topics);
 

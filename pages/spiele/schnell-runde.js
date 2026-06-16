@@ -32,21 +32,40 @@ export default function SchnellRunde() {
     try {
       const state = loadState();
       const recentTerms = state.collection.slice(-20).map((c) => c.term);
+      const learnedHashes = state.learnedQuestions || [];
       const { topics = ["uni", "arbeit", "ki", "alltag"], level = "C1" } = state.settings || {};
       
       const res = await fetch("/api/game", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ gameType: "schnell_runde", recentTerms, topics, level }),
+        body: JSON.stringify({ gameType: "schnell_runde", recentTerms, learnedHashes, topics, level }),
       });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
-      setItems(data.items);
+      
+      // Deduplicate (schnell-runde uses 'word' or 'question' depending on item)
+      const seen = new Set();
+      const uniqueItems = data.items.filter((item) => {
+        const key = (item.word || item.question || item.term || "").toLowerCase().trim();
+        if (key && seen.has(key)) return false;
+        if (key) seen.add(key);
+        return true;
+      });
+      
+      setItems(uniqueItems.length >= 5 ? uniqueItems : data.items);
       setIndex(0);
       setSelected(null);
       setResults({ correct: 0, total: 0 });
       resultsRef.current = { correct: 0, total: 0 };
       setTimeLeft(ROUND_SECONDS);
+      
+      // Mark items as learned
+      const itemsToMark = uniqueItems.length >= 5 ? uniqueItems : data.items;
+      itemsToMark?.forEach((item) => {
+        import("../../lib/storage").then(({ addLearnedQuestion }) => {
+          addLearnedQuestion(item);
+        });
+      });
     } catch (e) {
       setError("Konnte keine neue Runde laden. Bitte erneut versuchen.");
     }
@@ -83,11 +102,26 @@ export default function SchnellRunde() {
     };
     setSelected(option);
     setTimeout(() => {
-      if (index + 1 < items.length) {
-        setIndex(index + 1);
+      const nextIndex = index + 1;
+      if (nextIndex < items.length) {
+        setIndex(nextIndex);
         setSelected(null);
+      } else if (!done && timeLeft > 5 && nextItems && nextItems.length > 0) {
+        // Use pre-fetched next batch
+        setItems(nextItems);
+        setNextItems(null);
+        setIndex(0);
+        setSelected(null);
+        // Pre-fetch another batch
+        const state = loadState();
+        prefetchNextBatch(state);
+      } else if (!done && timeLeft > 5) {
+        // No pre-fetched items available, load fresh
+        setIndex(0);
+        setSelected(null);
+        load();
       } else {
-        // ran out of pre-generated items but time remains — loop back
+        // Time is almost up
         setIndex(0);
         setSelected(null);
       }

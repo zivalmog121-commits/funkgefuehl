@@ -35,22 +35,41 @@ export default function KennIchDas() {
     try {
       const state = loadState();
       const recentTerms = state.collection.slice(-20).map((c) => c.term);
+      const learnedHashes = state.learnedQuestions || [];
       const { topics = ["uni", "arbeit", "ki", "alltag"], level = "C1" } = state.settings || {};
       
       const res = await fetch("/api/game", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ gameType: "kenn_ich_das", recentTerms, topics, level }),
+        body: JSON.stringify({ gameType: "kenn_ich_das", recentTerms, learnedHashes, topics, level }),
       });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
-      setItems(data.items);
+      
+      // Deduplicate by term
+      const seen = new Set();
+      const uniqueItems = data.items.filter((item) => {
+        const key = item.term.toLowerCase().trim();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+      
+      setItems(uniqueItems.length >= 3 ? uniqueItems : data.items);
       setIndex(0);
       setGuess("");
       setShowHint(false);
       setRevealed(false);
       setResults({ correct: 0, total: 0 });
       setDone(false);
+      
+      // Mark items as learned
+      const itemsToMark = uniqueItems.length >= 3 ? uniqueItems : data.items;
+      itemsToMark?.forEach((item) => {
+        import("../../lib/storage").then(({ addLearnedQuestion }) => {
+          addLearnedQuestion(item);
+        });
+      });
     } catch (e) {
       setError("Konnte keine neue Runde laden. Bitte erneut versuchen.");
     }
