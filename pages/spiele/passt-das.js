@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import Layout from "../../components/Layout";
-import { loadState, recordSession, addToCollection } from "../../lib/storage";
+import { loadState, recordSession } from "../../lib/storage";
 
 export default function PasstDas() {
   const router = useRouter();
@@ -10,7 +10,6 @@ export default function PasstDas() {
   const [index, setIndex] = useState(0);
   const [selected, setSelected] = useState(null);
   const [results, setResults] = useState({ correct: 0, total: 0 });
-  const [added, setAdded] = useState(false);
   const [done, setDone] = useState(false);
   const [xpGain, setXpGain] = useState(0);
 
@@ -26,7 +25,7 @@ export default function PasstDas() {
       const recentTerms = state.collection.slice(-20).map((c) => c.term);
       const learnedHashes = state.learnedQuestions || [];
       const { topics = ["uni", "arbeit", "ki", "alltag"], level = "C1" } = state.settings || {};
-      
+
       const res = await fetch("/api/game", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -34,8 +33,7 @@ export default function PasstDas() {
       });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
-      
-      // Deduplicate by phrase
+
       const seen = new Set();
       const uniqueItems = data.items.filter((item) => {
         const key = item.phrase.toLowerCase().trim();
@@ -43,16 +41,15 @@ export default function PasstDas() {
         seen.add(key);
         return true;
       });
-      
+
       const itemsToUse = uniqueItems.length >= 3 ? uniqueItems : data.items;
-      
-      // Mark items as being learned this session
+
       itemsToUse?.forEach((item) => {
-        import("../lib/storage").then(({ addLearnedQuestion }) => {
+        import("../../lib/storage").then(({ addLearnedQuestion }) => {
           addLearnedQuestion(item);
         });
       });
-      
+
       setItems(itemsToUse);
       setIndex(0);
       setSelected(null);
@@ -63,37 +60,29 @@ export default function PasstDas() {
     }
   }
 
-  function choose(optIndex) {
-    if (selected !== null) return;
-    setSelected(optIndex);
+  function choose(option) {
+    const item = items[index];
+    const correct = option === item.correctIndex;
+    setResults((prev) => ({
+      correct: prev.correct + (correct ? 1 : 0),
+      total: prev.total + 1,
+    }));
+    setSelected(option);
+
+    setTimeout(() => {
+      if (index + 1 < items.length) {
+        setIndex(index + 1);
+        setSelected(null);
+      } else {
+        finishGame();
+      }
+    }, 500);
   }
 
-  function next() {
-    const item = items[index];
-    const wasCorrect = selected === item.correctIndex;
-    const newResults = { correct: results.correct + (wasCorrect ? 1 : 0), total: results.total + 1 };
-
-    if (index + 1 < items.length) {
-      setResults(newResults);
-      setIndex(index + 1);
-      setSelected(null);
-      setAdded(false);
-    } else {
-      const { xpGain } = recordSession("passt_das", newResults);
-      setResults(newResults);
-      setXpGain(xpGain);
-      setDone(true);
-    }
-  }
-
-  function collect() {
-    const item = items[index];
-    addToCollection({
-      term: item.phrase,
-      translation_he: item.explanation_he,
-      category: "register",
-    });
-    setAdded(true);
+  function finishGame() {
+    const { xpGain } = recordSession("passt_das", results);
+    setXpGain(xpGain);
+    setDone(true);
   }
 
   if (error) {
@@ -109,7 +98,7 @@ export default function PasstDas() {
     return (
       <Layout title="Passt das?" onBack={() => router.push("/")}>
         <div className="loading-state">
-          <span className="loading-pulse" /> SENDER WIRD GESUCHT...
+          <span className="loading-pulse" /> KONTEXTE WERDEN GESUCHT...
         </div>
       </Layout>
     );
@@ -118,81 +107,48 @@ export default function PasstDas() {
   if (done) {
     return (
       <Layout title="Passt das?" onBack={() => router.push("/")}>
-        <div className="prompt-card">
-          <div className="prompt-label">Runde fertig</div>
-          <div className="prompt-main">{results.correct} / {results.total} richtig</div>
+        <div className="done-card">
+          <div className="done-title">✓ Runde beendet!</div>
+          <div className="done-stat">{results.correct} von {results.total} richtig</div>
+          <div className="done-xp">+ {xpGain} XP</div>
+          <button className="btn btn-primary" onClick={load}>Neue Runde</button>
+          <button className="btn btn-secondary" onClick={() => router.push("/")}>Zur Startseite</button>
         </div>
-        <div className="readout-row">
-          <div className="readout">
-            <div className="readout-value accent">+{xpGain}</div>
-            <div className="readout-label">XP</div>
-          </div>
-        </div>
-        <button className="btn btn-primary" onClick={load} style={{ marginBottom: 8 }}>
-          ↻ Noch eine Runde
-        </button>
-        <button className="btn btn-secondary" onClick={() => router.push("/")}>
-          Zurück zum Empfang
-        </button>
       </Layout>
     );
   }
 
   const item = items[index];
+  const pct = ((index + 1) / items.length) * 100;
 
   return (
     <Layout title="Passt das?" onBack={() => router.push("/")}>
-      <div className="game-header">
-        <div className="progress-dots">
-          {items.map((_, i) => (
-            <span
-              key={i}
-              className={`progress-dot ${i < index ? "done" : ""} ${i === index ? "current" : ""}`}
-            />
-          ))}
-        </div>
-        <span className="score-pill">{results.correct}/{results.total}</span>
+      <div className="progress-bar">
+        <div className="progress-fill" style={{ width: `${pct}%` }} />
       </div>
 
-      <div className="prompt-card">
-        <div className="prompt-label">Wo passt das hin?</div>
-        <div className="prompt-main">„{item.phrase}"</div>
-      </div>
-
-      <div className="option-list">
-        {item.options.map((opt, i) => {
-          let cls = "option-btn";
-          if (selected !== null) {
-            if (i === selected && i === item.correctIndex) cls += " selected-good";
-            else if (i === selected && i !== item.correctIndex) cls += " selected-bad";
-            else if (i === item.correctIndex) cls += " reveal-correct";
-          }
-          return (
-            <button key={i} className={cls} onClick={() => choose(i)} disabled={selected !== null}>
-              {opt}
-            </button>
-          );
-        })}
-      </div>
-
-      {selected !== null && (
-        <>
-          <div className={`feedback-card ${selected === item.correctIndex ? "good" : "bad"}`}>
-            <div className="feedback-title">
-              {selected === item.correctIndex ? "Genau" : "Eher nicht"}
-            </div>
-            <div className="feedback-body rtl">{item.explanation_he}</div>
+      <div className="game-card">
+        <div className="question-num">Frage {index + 1} von {items.length}</div>
+        <div className="prompt-card">
+          <div className="prompt-label">In welchem Kontext passt das?</div>
+          <div className="prompt-main">{item.phrase}</div>
+          <div className="duel-grid">
+            {item.options.map((option, i) => (
+              <button
+                key={i}
+                className={`duel-btn ${selected === i ? (i === item.correctIndex ? "selected-good" : "selected-bad") : ""} ${selected !== null && i === item.correctIndex ? "reveal-correct" : ""}`}
+                onClick={() => choose(i)}
+                disabled={selected !== null}
+              >
+                {option}
+              </button>
+            ))}
           </div>
-
-          <button className="btn btn-secondary" onClick={collect} disabled={added} style={{ marginBottom: 8 }}>
-            {added ? "✓ Zur Sammlung hinzugefügt" : "+ Zur Sammlung"}
-          </button>
-
-          <button className="btn btn-primary" onClick={next}>
-            {index + 1 < items.length ? "Weiter" : "Runde abschließen"}
-          </button>
-        </>
-      )}
+          {selected !== null && (
+            <div className="explanation-he">{item.explanation_he}</div>
+          )}
+        </div>
+      </div>
     </Layout>
   );
 }
