@@ -81,8 +81,8 @@ export default async function handler(req, res) {
 
   const avoid =
     recentTerms && recentTerms.length
-      ? `Vermeide Wiederholungen folgender bereits verwendeter Begriffe/Formulierungen: ${recentTerms.slice(0, 25).join(", ")}.`
-      : "";
+      ? `Vermeide Wiederholungen dieser ${recentTerms.length} bereits verwendeten Begriffe/Formulierungen: ${recentTerms.slice(0, 30).join(", ")}.`
+      : "Erstelle neue, frische Beispiele die bisher nicht vorgekommen sind.";
 
   const persona = buildPersona(level, topics);
 

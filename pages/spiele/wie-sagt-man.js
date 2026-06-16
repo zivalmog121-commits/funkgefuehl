@@ -38,7 +38,19 @@ export default function WieSagtMan() {
       });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
-      setItems(data.items);
+      
+      // Deduplicate by awkward text (primary identifier)
+      const seen = new Set();
+      const uniqueItems = data.items.filter((item) => {
+        const key = item.awkward.toLowerCase().trim();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+      
+      // If too few items after dedup, fetch more
+      const itemsToUse = uniqueItems.length >= 3 ? uniqueItems : data.items;
+      setItems(itemsToUse);
       setIndex(0);
       setRevealed(false);
       setResults({ correct: 0, total: 0 });

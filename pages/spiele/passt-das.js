@@ -33,7 +33,17 @@ export default function PasstDas() {
       });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
-      setItems(data.items);
+      
+      // Deduplicate by phrase
+      const seen = new Set();
+      const uniqueItems = data.items.filter((item) => {
+        const key = item.phrase.toLowerCase().trim();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+      
+      setItems(uniqueItems.length >= 3 ? uniqueItems : data.items);
       setIndex(0);
       setSelected(null);
       setResults({ correct: 0, total: 0 });

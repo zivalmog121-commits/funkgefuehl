@@ -41,7 +41,17 @@ export default function SchnellRunde() {
       });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
-      setItems(data.items);
+      
+      // Deduplicate (schnell-runde uses 'word' or 'question' depending on item)
+      const seen = new Set();
+      const uniqueItems = data.items.filter((item) => {
+        const key = (item.word || item.question || item.term || "").toLowerCase().trim();
+        if (key && seen.has(key)) return false;
+        if (key) seen.add(key);
+        return true;
+      });
+      
+      setItems(uniqueItems.length >= 5 ? uniqueItems : data.items);
       setIndex(0);
       setSelected(null);
       setResults({ correct: 0, total: 0 });
