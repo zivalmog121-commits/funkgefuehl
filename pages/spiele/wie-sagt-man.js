@@ -1,7 +1,7 @@
 import { useRouter } from "next/router";
 import { useState, useEffect } from "react";
 import Layout from "../../components/Layout";
-import { loadState, saveState, syncAndSave } from "../../lib/storage";
+import { loadState, saveState, syncAndSave, recordSession } from "../../lib/storage";
 
 export default function WieSagtMan() {
   const router = useRouter();
@@ -89,7 +89,6 @@ export default function WieSagtMan() {
   }
 
   function finishGame() {
-    const { recordSession } = require("../lib/storage");
     const { xpGain } = recordSession("wie_sagt_man", results);
     setXpGain(xpGain);
     setDone(true);
