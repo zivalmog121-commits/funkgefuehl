@@ -1,7 +1,7 @@
+import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import { useState, useEffect } from "react";
 import Layout from "../../components/Layout";
-import { loadState, saveState, syncAndSave, recordSession } from "../../lib/storage";
+import { loadState, recordSession, addToCollection } from "../../lib/storage";
 
 export default function WieSagtMan() {
   const router = useRouter();
@@ -10,6 +10,7 @@ export default function WieSagtMan() {
   const [index, setIndex] = useState(0);
   const [revealed, setRevealed] = useState(false);
   const [results, setResults] = useState({ correct: 0, total: 0 });
+  const [added, setAdded] = useState(false);
   const [done, setDone] = useState(false);
   const [xpGain, setXpGain] = useState(0);
 
@@ -21,25 +22,39 @@ export default function WieSagtMan() {
     setError("");
     setItems(null);
     try {
-      const state = loadState();
+          } catch (err) {
+          return;
+        }
+      }
+    }
+
+    // Mark all items in this session as learned
+    items?.forEach((item) => {
+      import("../lib/storage").then(({ addLearnedQuestion }) => {
+        addLearnedQuestion(item);
+      });
+    });
+
+    const state = loadState();
       const recentTerms = state.collection.slice(-20).map((c) => c.term);
       const learnedHashes = state.learnedQuestions || [];
       const { topics = ["uni", "arbeit", "ki", "alltag"], level = "C1" } = state.settings || {};
-
+      
       const res = await fetch("/api/game", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          gameType: "wie_sagt_man",
+        body: JSON.stringify({ 
+          gameType: "wie_sagt_man", 
           recentTerms,
           learnedHashes,
           topics,
-          level,
+          level
         }),
       });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
-
+      
+      // Deduplicate by awkward text (primary identifier)
       const seen = new Set();
       const uniqueItems = data.items.filter((item) => {
         const key = item.awkward.toLowerCase().trim();
@@ -47,15 +62,17 @@ export default function WieSagtMan() {
         seen.add(key);
         return true;
       });
-
+      
+      // If too few items after dedup, fetch more
       const itemsToUse = uniqueItems.length >= 3 ? uniqueItems : data.items;
-
+      
+      // Mark items as being learned this session
       itemsToUse?.forEach((item) => {
         import("../lib/storage").then(({ addLearnedQuestion }) => {
           addLearnedQuestion(item);
         });
       });
-
+      
       setItems(itemsToUse);
       setIndex(0);
       setRevealed(false);
@@ -71,44 +88,39 @@ export default function WieSagtMan() {
   }
 
   function rate(knewIt) {
-    if (knewIt) {
-      setResults((prev) => ({
-        correct: prev.correct + 1,
-        total: prev.total + 1,
-      }));
-    } else {
-      setResults((prev) => ({ ...prev, total: prev.total + 1 }));
-    }
-
+    setResults((r) => ({ correct: r.correct + (knewIt ? 1 : 0), total: r.total + 1 }));
     if (index + 1 < items.length) {
       setIndex(index + 1);
       setRevealed(false);
+      setAdded(false);
     } else {
-      finishGame();
+      finish(knewIt);
     }
   }
 
-  function finishGame() {
-    const { xpGain } = recordSession("wie_sagt_man", results);
+  function finish(lastKnewIt) {
+    const finalResults = { correct: results.correct + (lastKnewIt ? 1 : 0), total: results.total + 1 };
+    const { xpGain } = recordSession("wie_sagt_man", finalResults);
+    setResults(finalResults);
     setXpGain(xpGain);
     setDone(true);
+  }
 
-    const state = loadState();
-    const newState = {
-      ...state,
-      xp: state.xp + xpGain,
-    };
-    saveState(newState);
-    syncAndSave(newState).catch(() => {});
+  function collect() {
+    const item = items[index];
+    addToCollection({
+      term: item.natural,
+      translation_he: item.explanation_he,
+      category: "wendung",
+    });
+    setAdded(true);
   }
 
   if (error) {
     return (
       <Layout title="Wie sagt man das?" onBack={() => router.push("/")}>
         <div className="error-text">{error}</div>
-        <button className="btn btn-secondary" onClick={load}>
-          Erneut versuchen
-        </button>
+        <button className="btn btn-secondary" onClick={load}>Erneut versuchen</button>
       </Layout>
     );
   }
@@ -117,7 +129,7 @@ export default function WieSagtMan() {
     return (
       <Layout title="Wie sagt man das?" onBack={() => router.push("/")}>
         <div className="loading-state">
-          <span className="loading-pulse" /> BEISPIELE WERDEN GESUCHT...
+          <span className="loading-pulse" /> SENDER WIRD GESUCHT...
         </div>
       </Layout>
     );
@@ -126,63 +138,77 @@ export default function WieSagtMan() {
   if (done) {
     return (
       <Layout title="Wie sagt man das?" onBack={() => router.push("/")}>
-        <div className="done-card">
-          <div className="done-title">✓ Runde beendet!</div>
-          <div className="done-stat">
-            {results.correct} von {results.total} richtig
+        <div className="prompt-card">
+          <div className="prompt-label">Runde fertig</div>
+          <div className="prompt-main">
+            {results.correct} / {results.total} kanntest du schon
           </div>
-          <div className="done-xp">+ {xpGain} XP</div>
-          <button className="btn btn-primary" onClick={load}>
-            Neue Runde
-          </button>
-          <button className="btn btn-secondary" onClick={() => router.push("/")}>
-            Zur Startseite
-          </button>
         </div>
+        <div className="readout-row">
+          <div className="readout">
+            <div className="readout-value accent">+{xpGain}</div>
+            <div className="readout-label">XP</div>
+          </div>
+        </div>
+        <button className="btn btn-primary" onClick={load} style={{ marginBottom: 8 }}>
+          ↻ Noch eine Runde
+        </button>
+        <button className="btn btn-secondary" onClick={() => router.push("/")}>
+          Zurück zum Empfang
+        </button>
       </Layout>
     );
   }
 
   const item = items[index];
-  const pct = ((index + 1) / items.length) * 100;
 
   return (
     <Layout title="Wie sagt man das?" onBack={() => router.push("/")}>
-      <div className="progress-bar">
-        <div className="progress-fill" style={{ width: `${pct}%` }} />
+      <div className="game-header">
+        <div className="progress-dots">
+          {items.map((_, i) => (
+            <span
+              key={i}
+              className={`progress-dot ${i < index ? "done" : ""} ${i === index ? "current" : ""}`}
+            />
+          ))}
+        </div>
+        <span className="score-pill">{results.correct}/{results.total}</span>
       </div>
 
-      <div className="game-card">
-        <div className="question-num">
-          Frage {index + 1} von {items.length}
-        </div>
+      <div className="prompt-card">
+        <div className="prompt-label">So würdest du es vielleicht sagen</div>
+        <div className="prompt-main">„{item.awkward}"</div>
+      </div>
 
-        {!revealed ? (
-          <div className="prompt-card">
-            <div className="prompt-label">Unnatürlich / Englisch / Hebräisch</div>
-            <div className="prompt-main">{item.awkward}</div>
-            <button className="btn btn-primary" onClick={reveal}>
-              Lösung zeigen
+      {!revealed ? (
+        <button className="btn btn-primary" onClick={reveal}>
+          Wie sagt man's wirklich?
+        </button>
+      ) : (
+        <>
+          <div className="feedback-card good">
+            <div className="feedback-title">So sagt man's natürlich</div>
+            <div className="feedback-body" style={{ fontFamily: "var(--font-display)", fontSize: "1.1rem", marginBottom: 10 }}>
+              „{item.natural}"
+            </div>
+            <div className="feedback-body rtl">{item.explanation_he}</div>
+          </div>
+
+          <button className="btn btn-secondary" onClick={collect} disabled={added} style={{ marginBottom: 8 }}>
+            {added ? "✓ Zur Sammlung hinzugefügt" : "+ Zur Sammlung"}
+          </button>
+
+          <div className="duel-grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
+            <button className="btn btn-bad" onClick={() => rate(false)}>
+              War neu für mich
+            </button>
+            <button className="btn btn-good" onClick={() => rate(true)}>
+              Kannte ich schon
             </button>
           </div>
-        ) : (
-          <div className="feedback-card">
-            <div className="feedback-label">Wie ein Muttersprachler:</div>
-            <div className="feedback-text">{item.natural}</div>
-            <div className="explanation-he">{item.explanation_he}</div>
-            <div className="formality-badge">{item.formality}</div>
-            <div className="rating-prompt">Hast du das gewusst?</div>
-            <div className="rating-buttons">
-              <button className="btn btn-yes" onClick={() => rate(true)}>
-                ✓ Ja
-              </button>
-              <button className="btn btn-no" onClick={() => rate(false)}>
-                ✗ Nein
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
+        </>
+      )}
     </Layout>
   );
 }
