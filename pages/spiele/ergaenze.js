@@ -24,27 +24,16 @@ export default function Erganze() {
     try {
       const state = loadState();
       const recentTerms = state.collection.slice(-20).map((c) => c.term);
-      const learnedHashes = state.learnedQuestions || [];
       const { topics = ["uni", "arbeit", "ki", "alltag"], level = "C1" } = state.settings || {};
       
       const res = await fetch("/api/game", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ gameType: "ergaenze", recentTerms, learnedHashes, topics, level }),
+        body: JSON.stringify({ gameType: "ergaenze", recentTerms, topics, level }),
       });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
-      
-      // Deduplicate by starter
-      const seen = new Set();
-      const uniqueItems = data.items.filter((item) => {
-        const key = item.starter.toLowerCase().trim();
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      });
-      
-      setItems(uniqueItems.length >= 3 ? uniqueItems : data.items);
+      setItems(data.items);
       setIndex(0);
       setSelected(null);
       setResults({ correct: 0, total: 0 });
