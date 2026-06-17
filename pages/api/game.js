@@ -25,43 +25,43 @@ function buildPersona(level, topics) {
 }
 
 const PROMPTS = {
-  wie_sagt_man: (avoid, level) => `Erstelle 5 Beispiele für das Spiel "Wie sagt man das?" (Niveau: ${level}).
+  wie_sagt_man: (avoid, level) => `Erstelle 30 Beispiele für das Spiel "Wie sagt man das?" (Niveau: ${level}).
 Jedes Beispiel zeigt einen Satz, den ein Nicht-Muttersprachler wörtlich aus dem Englischen oder Hebräischen ins Deutsche übersetzen würde (grammatisch oft korrekt, aber unnatürlich/unidiomatisch), und daneben, wie ein Muttersprachler es tatsächlich ausdrücken würde.
 ${avoid}
-Antworte als JSON-Array mit 5 Objekten, jedes mit genau diesen Feldern:
+Antworte als JSON-Array mit 30 Objekten, jedes mit genau diesen Feldern:
 - "awkward": der unnatürlich klingende, aber grammatisch meist korrekte Satz (Deutsch)
 - "natural": wie ein Muttersprachler es wirklich sagen würde (Deutsch)
 - "explanation_he": kurze Erklärung auf Hebräisch (1-2 Sätze), warum die natürliche Version besser klingt
 - "formality": eine von "formal", "neutral", "informal"`,
 
-  passt_das: (avoid, level) => `Erstelle 5 Beispiele für das Spiel "Passt das?" (Niveau: ${level}).
+  passt_das: (avoid, level) => `Erstelle 30 Beispiele für das Spiel "Passt das?" (Niveau: ${level}).
 Jedes Beispiel zeigt eine deutsche Redewendung oder Formulierung (oft umgangssprachlich, manchmal förmlich), und der Nutzer muss einschätzen, in welchem Kontext sie passt.
 ${avoid}
-Antworte als JSON-Array mit 5 Objekten, jedes mit genau diesen Feldern:
+Antworte als JSON-Array mit 30 Objekten, jedes mit genau diesen Feldern:
 - "phrase": die deutsche Redewendung/Formulierung
 - "options": ein Array von genau 3 Strings, das die möglichen Kontexte beschreibt (z.B. "Unter Freunden", "Im Seminar mit Professor", "Passt eigentlich nirgendwo so")
 - "correctIndex": die 0-basierte Position der richtigen Antwort im "options"-Array
 - "explanation_he": kurze Erklärung auf Hebräisch (1-2 Sätze), wann/warum man das so sagt`,
 
-  ergaenze: (avoid, level) => `Erstelle 5 Beispiele für das Spiel "Ergänze den Satz" (Niveau: ${level}).
+  ergaenze: (avoid, level) => `Erstelle 30 Beispiele für das Spiel "Ergänze den Satz" (Niveau: ${level}).
 Jedes Beispiel zeigt einen unvollständigen, alltäglichen oder akademischen deutschen Satzanfang, und 3 mögliche Fortsetzungen, von denen eine am natürlichsten klingt (keine ist grammatisch falsch, aber eine klingt am authentischsten).
 ${avoid}
-Antworte als JSON-Array mit 5 Objekten, jedes mit genau diesen Feldern:
+Antworte als JSON-Array mit 30 Objekten, jedes mit genau diesen Feldern:
 - "starter": der Satzanfang (Deutsch, endet z.B. mit "...")
 - "options": ein Array von genau 3 Strings mit möglichen Fortsetzungen
 - "correctIndex": die 0-basierte Position der natürlichsten Fortsetzung
 - "explanation_he": kurze Erklärung auf Hebräisch (1-2 Sätze), warum diese Fortsetzung am natürlichsten klingt`,
 
-  kenn_ich_das: (avoid, level) => `Erstelle 5 Beispiele für das Spiel "Kenn ich das?" (Niveau: ${level}) — Begriff erraten.
+  kenn_ich_das: (avoid, level) => `Erstelle 30 Beispiele für das Spiel "Kenn ich das?" (Niveau: ${level}) — Begriff erraten.
 Jedes Beispiel gibt eine hebräische Definition/Beschreibung eines deutschen Wortes, einer Redewendung oder eines umgangssprachlichen/akademischen Ausdrucks, und der Nutzer muss den deutschen Begriff erraten.
 ${avoid}
-Antworte als JSON-Array mit 5 Objekten, jedes mit genau diesen Feldern:
+Antworte als JSON-Array mit 30 Objekten, jedes mit genau diesen Feldern:
 - "definition_he": eine klare Beschreibung/Definition auf Hebräisch, ohne den Begriff selbst zu verraten
 - "answer": der gesuchte deutsche Begriff oder Ausdruck
 - "hint": ein Hinweis auf Hebräisch, z.B. der erste Buchstabe oder die Wortanzahl oder ein Kontext-Hinweis
 - "explanation_he": kurze zusätzliche Erklärung auf Hebräisch, wie/wann man den Begriff verwendet`,
 
-  schnell_runde: (avoid, level) => `Erstelle 10 Beispiele für das Spiel "Schnell-Runde" (Niveau: ${level}) — Zeitdruck-Quiz.
+  schnell_runde: (avoid, level) => `Erstelle 30 Beispiele für das Spiel "Schnell-Runde" (Niveau: ${level}) — Zeitdruck-Quiz.
 Jedes Beispiel zeigt ein hebräisches Wort oder einen kurzen Ausdruck, sowie zwei deutsche Übersetzungsmöglichkeiten — beide grammatisch plausibel, aber nur eine ist die natürliche, gängige Art, wie Muttersprachler es im Alltag/akademischen Kontext sagen würden.
 ${avoid}
 Antworte als JSON-Array mit 10 Objekten, jedes mit genau diesen Feldern:

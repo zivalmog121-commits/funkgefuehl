@@ -21,6 +21,7 @@ export default function Dashboard() {
   const [state, setState] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [dailyPhrase, setDailyPhrase] = useState(null);
+  const [toast, setToast] = useState(null);
 
   useEffect(() => {
     const loaded = loadState();
@@ -92,6 +93,7 @@ export default function Dashboard() {
   else if (score > 0) dialSubtext = "Sender wird gesucht...";
 
   return (
+    <>
     <Layout>
       <Dial 
         score={score} 
@@ -251,7 +253,9 @@ export default function Dashboard() {
                   saveState(newState);
                   syncAndSave(newState).catch(() => {});
                   setState(newState);
-                  setShowModal(false);
+                  setToast("✅ Phrase gespeichert!");
+                  setTimeout(() => setToast(null), 2000);
+                  setTimeout(() => setShowModal(false), 300);
                 }}
               >
                 ⭐ Speichern
@@ -268,5 +272,27 @@ export default function Dashboard() {
         </div>
       )}
     </Layout>
+
+    {/* Toast Notification */}
+    {toast && (
+      <div 
+        style={{
+          position: "fixed",
+          bottom: 20,
+          left: 20,
+          right: 20,
+          background: "var(--accent-secondary)",
+          color: "#000",
+          padding: "12px 16px",
+          borderRadius: 8,
+          fontWeight: 600,
+          zIndex: 2000,
+          animation: "slideUp 0.3s ease",
+        }}
+      >
+        {toast}
+      </div>
+    )}
+    </>
   );
 }
